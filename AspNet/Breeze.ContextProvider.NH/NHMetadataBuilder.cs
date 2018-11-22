@@ -500,9 +500,26 @@ namespace Breeze.ContextProvider.NH
             nmap.Add("isScalar", !propType.IsCollectionType);
 
             // the associationName must be the same at both ends of the association.
-            Type containingType = containingPersister.EntityMetamodel.Type;
-            string[] columnNames = GetPropertyColumnNames(containingPersister, propName, propType);
-            nmap.Add("associationName", GetAssociationName(containingType.Name, relatedEntityType.Name, columnNames));
+            var containingType = containingPersister.EntityMetamodel.Type;
+            var columnNames = GetPropertyColumnNames(containingPersister, propName, propType);
+
+            var relatedEntityTypeName = relatedEntityType.Name;
+            
+            // TODO: get property's real name - it might not be equal to column name
+            var propertyName = columnNames[0].EndsWith("Id") ? columnNames[0].Substring(0, columnNames[0].Length - 2) : columnNames[0];
+            var propertyType = relatedEntityType.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public);
+
+            if (propertyType?.DeclaringType != null)
+            {
+                var declaringTypeMetadata = _sessionFactory.GetClassMetadata(propertyType.DeclaringType) as SingleTableEntityPersister;
+
+                if (declaringTypeMetadata != null && declaringTypeMetadata.DiscriminatorValue != null)
+                {
+                    relatedEntityTypeName = declaringTypeMetadata.EntityName.Split('.').Last();
+                } 
+            }
+
+            nmap.Add("associationName", GetAssociationName(containingType.Name, relatedEntityTypeName, columnNames));
 
             var propertyIndex = containingPersister.PropertyNames.ToList().IndexOf(propName);
             var cascadeStyle = containingPersister.PropertyCascadeStyles[propertyIndex];
