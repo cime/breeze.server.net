@@ -228,11 +228,8 @@ namespace Breeze.ContextProvider.NH.Filters
             if (queryable == null) return null;
             var provider = queryable.Provider as DefaultQueryProvider;
             if (provider == null) return null;
-
-            var propertyInfo = typeof(DefaultQueryProvider).GetProperty("Session", BindingFlags.NonPublic | BindingFlags.Instance);
-            var result = propertyInfo.GetValue(provider);
-
-            return result as ISession;
+            
+            return provider.Session as ISession;
         }
     }
 }
