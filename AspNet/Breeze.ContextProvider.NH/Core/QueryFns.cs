@@ -46,8 +46,12 @@ namespace Breeze.ContextProvider.NH.Core
         
         public static string ExtractAndDecodeQueryString(HttpActionExecutedContext context)
         {
-            var qs = context.Request.RequestUri.Query;
-            var q = WebUtility.UrlDecode(qs);
+            return ExtractAndDecodeQueryString(context.Request.RequestUri.Query);
+        }
+
+        public static string ExtractAndDecodeQueryString(string queryString)
+        {
+            var q = WebUtility.UrlDecode(queryString);
             if (q.Length == 0)
             {
                 return null;

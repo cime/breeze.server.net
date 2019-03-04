@@ -2,17 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Web.Http.Controllers;
-using System.Web.Http.Filters;
 using Breeze.ContextProvider.NH.Json;
-using Newtonsoft.Json.Utilities;
 using NHibernate;
 using NHibernate.Intercept;
 using NHibernate.Metadata;
-using NHibernate.Proxy;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Collections;
+using System.Collections.Concurrent;
 using Breeze.ContextProvider.NH.Extensions;
 using NHibernate.Proxy.DynamicProxy;
 using NHibernate.Type;
@@ -30,8 +27,8 @@ namespace Breeze.ContextProvider.NH
 
         private static readonly FieldInfo DefaultContractResolverStateNameTableField;
         private static readonly MethodInfo PropertyNameTableAddMethod;
-
-        public HashSet<string> ResolvedTypes = new HashSet<string>();
+        
+        private readonly ConcurrentBag<string> _resolvedTypes = new ConcurrentBag<string>();
         private readonly IBreezeConfigurator _breezeConfigurator;
         private readonly Func<Type, IClassMetadata> _getMetadataFunc;
 
@@ -119,11 +116,13 @@ namespace Breeze.ContextProvider.NH
             {
                 foreach (var syntheticProp in syntheticPoperties)
                 {
+                    var propertyName = ResolvePropertyName(syntheticProp.Name);
+                    
                     properties.Add(new JsonProperty
                     {
                         Readable = true,
                         Writable = true,
-                        PropertyName = syntheticProp.Name,
+                        PropertyName = propertyName,
                         PropertyType = syntheticProp.PkType.ReturnedClass,
                         ValueProvider = new NHSyntheticPropertyValueProvider(syntheticProp)
                     });
@@ -156,15 +155,17 @@ namespace Breeze.ContextProvider.NH
             {
                 type = type.BaseType;
             }
-            if (!ResolvedTypes.Contains(type.FullName))
+
+            if (!_resolvedTypes.Contains(type.FullName))
             {
                 var metadata = _getMetadataFunc(type);
                 if (metadata != null)
                 {
                     _entitiesMetadata[type] = metadata;
                 }
+
+                _resolvedTypes.Add(type.FullName);
             }
-            ResolvedTypes.Add(type.FullName);
 
             return base.ResolveContract(type);
         }

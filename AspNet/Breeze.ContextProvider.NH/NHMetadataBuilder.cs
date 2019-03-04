@@ -288,12 +288,22 @@ namespace Breeze.ContextProvider.NH
             }
 
             // We do the association properties after the data properties, so we can do the foreign key lookups
-            for (int i = 0; i < propNames.Length; i++)
+            for (var i = 0; i < propNames.Length; i++)
             {
                 var propName = propNames[i];
-                if (inheritedProperties.Contains(propName)) continue;  // skip property defined on superclass 
-
                 var propType = propTypes[i];
+
+                if (inheritedProperties.Contains(propName))
+                {
+                    // Create empty synthetic property list so it can later merge base class properties
+                    if (propType.IsAssociationType && !_syntheticProperties.ContainsKey(type))
+                    {
+                        _syntheticProperties[type] = new List<NHSyntheticProperty>();
+                    }
+
+                    continue;  // skip property defined on superclass 
+                }
+                
                 if (propType.IsAssociationType)
                 {
                     // navigation property
